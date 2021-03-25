@@ -1,0 +1,36 @@
+[bootstrap]
+main_collection = /main/main.collectionc
+render = /orthographic/render/orthographic.renderc
+
+[script]
+shared_state = 1
+
+[display]
+width = 960
+height = 640
+high_dpi = 1
+
+[android]
+input_method = HiddenInputField
+
+[project]
+title = dmanifest_decode
+dependencies = https://github.com/britzl/defold-orthographic/archive/refs/tags/2.11.4.zip,https://github.com/andsve/def-diags/archive/946d4cd81fef6e2b848df8717f34e1bdbe72e9fc.zip,https://github.com/Melsoft-Games/defold-protobuf/archive/master.zip
+custom_resources = proto/
+version = 1.0.0
+
+[render]
+clear_color_alpha = 1.0
+clear_color_red = 0.2
+clear_color_green = 0.2
+clear_color_blue = 0.2
+
+[html5]
+scale_mode = stretch
+show_made_with_defold = 0
+show_fullscreen_button = 0
+cssfile = /builtins/manifests/web/dark_theme.css
+
+[input]
+game_binding = /imgui/bindings/imgui.input_bindingc
+

@@ -1,0 +1,119 @@
+local unfold = require("main.unfold")
+
+local function tohex(str)
+    return (str:gsub('.', function (c)
+        return string.format('%02x', string.byte(c))
+    end))
+end
+
+local function read_file(filename)
+    local file = assert(io.open(filename, "rb"))
+    local data = file:read("*a")
+    file:close()
+    return data
+end
+
+local function extract_res_pairs(manifest)
+    local t = {}
+    for _, v in ipairs(manifest.data.resources) do
+        table.insert(t, { hash = tohex(v.hash.data), url = v.url })
+    end
+    table.sort(t, function(a, b) return a.hash < b.hash end)
+    return t
+end
+
+local function upload_file_handler(self, message_id, message)
+    local _, err = pcall(function(self)
+        if message_id == "upload_file" then
+            self.manifest = assert(unfold.read_manifest(message), "Can't parse manifest")
+            self.res_pairs = extract_res_pairs(self.manifest)
+        end
+    end, self)
+
+    if err then
+        self.message = "ERROR: " .. err
+        self.message_timeout = socket.gettime() + 5
+    end
+end
+
+function init(self)
+    imgui.disable_ini()
+    imgui.scale_all_sizes(window.get_size() / 960)
+
+    if jstodef then
+        jstodef.add_listener(upload_file_handler)
+    end
+
+    self.quick_search = ""
+end
+
+function final(self)
+    if jstodef then
+        jstodef.remove_listener(upload_file_handler)
+    end
+end
+
+function update(self, dt)
+    imgui.set_next_window_pos(0, 0)
+    imgui.set_next_window_size(window.get_size())
+    imgui.begin_window("Defold Manifest Decoding Tool")
+
+    if self.message then
+        imgui.text(self.message)
+        imgui.separator()
+
+        if self.message_timeout and self.message_timeout < socket.gettime() then
+            self.message = nil
+        end
+    end
+
+    local _, err = pcall(function(self)
+        if imgui.button("Upload Manifest") then
+            if html5 then
+                html5.run("ExtTriggerUploadFile()")
+            else
+                local r, path = diags.open("dmanifest0,dmanifest")
+                if r == 1 then
+                    self.manifest = unfold.read_manifest(read_file(path))
+                    assert(next(self.manifest), "Can't parse manifest")
+                    self.res_pairs = extract_res_pairs(self.manifest)
+                end
+            end
+        end
+
+        imgui.same_line()
+        local changed, quick_search = imgui.input_text("Quick Search", self.quick_search)
+        if changed then
+            self.quick_search = quick_search
+        end
+
+        imgui.separator()
+
+        if self.res_pairs then
+            local qs = self.quick_search
+            for _, v in ipairs(self.res_pairs) do
+                if not qs or string.find(v.hash, qs) or string.find(v.url, qs) then
+                    imgui.text(v.hash)
+                    imgui.same_line()
+                    imgui.text(v.url)
+                end
+            end
+        end
+    end, self)
+
+    if err then
+        self.message = "ERROR: " .. err
+        self.message_timeout = socket.gettime() + 5
+    end
+
+    imgui.end_window()
+end
+
+function on_message(self, message_id, message, sender)
+end
+
+function on_input(self, action_id, action)
+end
+
+function on_reload(self)
+end
